@@ -8,13 +8,14 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
-
+#import "iTuneCell.h"
 #import "ViewController.h"
 
-@interface ViewController () <NSURLSessionDelegate, NSURLSessionDownloadDelegate, NSURLSessionTaskDelegate>
+@interface ViewController () <NSURLSessionDelegate, NSURLSessionDownloadDelegate, NSURLSessionTaskDelegate, UITableViewDataSource, UITableViewDelegate>
 
 @property (nonatomic, strong) NSURLSession *session;
 @property (nonatomic, strong) NSArray *itunesEntries;
+@property (weak, nonatomic) IBOutlet UITableView *table;
 
 @end
 
@@ -23,6 +24,7 @@
 -(void) viewDidLoad {
 	[super viewDidLoad];
 	
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
 	NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
 	configuration.HTTPMaximumConnectionsPerHost = 3;
 	self.session = [NSURLSession sessionWithConfiguration:configuration
@@ -40,8 +42,19 @@
 												 NSString *previewUrl = [self.itunesEntries lastObject][@"previewUrl"];
 												 NSLog(@"%@", [previewUrl lastPathComponent]);
 												 [self downloadItunesAudioPreview:previewUrl];
+                                                 [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+                                                 [self.table reloadData];
 											 }];
 	[task resume];
+    
+    NSString *applicationSupportPath = [[NSHomeDirectory() stringByAppendingPathComponent:@"Library"] stringByAppendingPathComponent:@"Application Support"];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:applicationSupportPath]) {
+        NSError *error = nil;
+        [[NSFileManager defaultManager] createDirectoryAtPath:applicationSupportPath
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:&error];
+    }
 }
 
 -(void) downloadItunesAudioPreview:(NSString *)previewUrl {
@@ -55,8 +68,7 @@
 	NSLog(@"%@ of %@", [formatter stringFromByteCount:totalBytesWritten], [formatter stringFromByteCount:totalBytesExpectedToWrite]);
 }
 
-- (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask
-didFinishDownloadingToURL:(NSURL *)location {
+- (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(NSURL *)location {
 	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSError *error = nil;
 	NSString *destinationUrl = [[NSHomeDirectory() stringByAppendingPathComponent:@"Library"] stringByAppendingPathComponent:@"Application Support"];
@@ -76,13 +88,61 @@ didFinishDownloadingToURL:(NSURL *)location {
 	}
 	NSLog(@"%@", error);
 	
-	AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] initWithNibName:nil bundle:nil];
-	AVPlayer *player = [AVPlayer playerWithURL:[NSURL fileURLWithPath:destinationUrl]];
-	playerViewController.player = player;
-	[self presentViewController:playerViewController
-					   animated:YES
-					 completion:NULL];
+//	AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] initWithNibName:nil bundle:nil];
+//	AVPlayer *player = [AVPlayer playerWithURL:[NSURL fileURLWithPath:destinationUrl]];
+//	playerViewController.player = player;
+//	[self presentViewController:playerViewController animated:YES completion:NULL];
 	
+}
+
+#pragma mark UITableViewDataSource<NSObject>
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return [self.itunesEntries count];
+//    return 1;
+}
+
+// Row display. Implementers should *always* try to reuse cells by setting each cell's reuseIdentifier and querying for available reusable cells with dequeueReusableCellWithIdentifier:
+// Cell gets various attributes set automatically based on table (separators) and data source (accessory views, editing controls)
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString * identificator = @"cell";
+    iTuneCell *cell = [tableView dequeueReusableCellWithIdentifier:identificator forIndexPath:indexPath];
+    [cell configureWithiTuneObject:[self.itunesEntries objectAtIndex:indexPath.row]];
+    
+    if (!cell.isDownloaded) {
+        cell.playButton.enabled = NO;
+        cell.downloadButton.enabled = YES;
+    } else {
+        cell.playButton.enabled = YES;
+        cell.downloadButton.enabled = NO;
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        
+        [[self.session dataTaskWithURL:[NSURL URLWithString:cell.imageUrl]
+                     completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+                         
+            cell.trackImage.image = [UIImage imageWithData:data];
+        }] resume];
+    });
+
+//    NSURLSessionDataTask *dataTask = [self.session dataTaskWithURL:[NSURL URLWithString:cell.imageUrl]
+//                                             completionHandler:^(NSData *data, NSURLResponse *response,
+//                                                                 NSError *error) {
+//                                                 if (!error) {
+//                                                     cell.tmpImage = [[UIImage alloc] initWithData:data];
+//                                                     dispatch_async(dispatch_get_main_queue(), ^{
+//
+//                                                         cell.trackImage.image = cell.tmpImage;
+//                                                     });
+//                                                 } else {
+//                                                     // HANDLE ERROR //
+//                                                 }
+//                                             }];
+//    [dataTask resume];
+//    
+    
+    return cell;
 }
 
 @end
