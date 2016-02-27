@@ -6,12 +6,10 @@
 //  Copyright © 2016 geekhub. All rights reserved.
 //
 
-#import <AVFoundation/AVFoundation.h>
-#import <AVKit/AVKit.h>
 #import "iTuneCell.h"
 #import "ViewController.h"
 
-@interface ViewController () <NSURLSessionDelegate, NSURLSessionDownloadDelegate, NSURLSessionTaskDelegate, UITableViewDataSource, UITableViewDelegate>
+@interface ViewController () <NSURLSessionDownloadDelegate, UITableViewDataSource, UITableViewDelegate>
 
 @property (nonatomic, strong) NSURLSession *session;
 @property (nonatomic, strong) NSArray *itunesEntries;
@@ -38,10 +36,6 @@
 																												 options:0ul
 																												   error:&jsonError];
 												 self.itunesEntries = jsonData[@"results"];
-												 NSLog(@"%@", self.itunesEntries);
-												 NSString *previewUrl = [self.itunesEntries lastObject][@"previewUrl"];
-												 NSLog(@"%@", [previewUrl lastPathComponent]);
-												 [self downloadItunesAudioPreview:previewUrl];
                                                  [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
                                                  [self.table reloadData];
 											 }];
@@ -55,17 +49,6 @@
                                                    attributes:nil
                                                         error:&error];
     }
-}
-
--(void) downloadItunesAudioPreview:(NSString *)previewUrl {
-	NSURLSessionDownloadTask *task = [self.session downloadTaskWithURL:[NSURL URLWithString:previewUrl]];
-	[task resume];
-}
-
-
--(void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
-	NSByteCountFormatter *formatter = [[NSByteCountFormatter alloc] init];
-	NSLog(@"%@ of %@", [formatter stringFromByteCount:totalBytesWritten], [formatter stringFromByteCount:totalBytesExpectedToWrite]);
 }
 
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(NSURL *)location {
@@ -102,9 +85,6 @@
 //    return 1;
 }
 
-// Row display. Implementers should *always* try to reuse cells by setting each cell's reuseIdentifier and querying for available reusable cells with dequeueReusableCellWithIdentifier:
-// Cell gets various attributes set automatically based on table (separators) and data source (accessory views, editing controls)
-
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     static NSString * identificator = @"cell";
     iTuneCell *cell = [tableView dequeueReusableCellWithIdentifier:identificator forIndexPath:indexPath];
@@ -113,9 +93,13 @@
     if (!cell.isDownloaded) {
         cell.playButton.enabled = NO;
         cell.downloadButton.enabled = YES;
+        [cell.downloadProgressBar setProgress:.0f];
+        cell.downloadStatusLabel.text = [NSString stringWithFormat:@"0 of 0"];
     } else {
         cell.playButton.enabled = YES;
         cell.downloadButton.enabled = NO;
+        [cell.downloadProgressBar setProgress:1.0f];
+        cell.downloadStatusLabel.text = [NSString stringWithFormat:@"Downloaded."];
     }
     dispatch_async(dispatch_get_main_queue(), ^{
         
