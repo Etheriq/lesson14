@@ -9,7 +9,7 @@
 #import "iTuneCell.h"
 #import "ViewController.h"
 
-@interface ViewController () <NSURLSessionDownloadDelegate, UITableViewDataSource, UITableViewDelegate>
+@interface ViewController () <NSURLSessionDataDelegate, UITableViewDataSource>
 
 @property (nonatomic, strong) NSURLSession *session;
 @property (nonatomic, strong) NSArray *itunesEntries;
@@ -51,38 +51,11 @@
     }
 }
 
-- (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(NSURL *)location {
-	NSFileManager *fileManager = [NSFileManager defaultManager];
-	NSError *error = nil;
-	NSString *destinationUrl = [[NSHomeDirectory() stringByAppendingPathComponent:@"Library"] stringByAppendingPathComponent:@"Application Support"];
-	destinationUrl = [destinationUrl stringByAppendingPathComponent:@"2.m4a"];
-	
-	if (![fileManager fileExistsAtPath:destinationUrl]) {
-		[fileManager moveItemAtURL:location
-							 toURL:[NSURL fileURLWithPath:destinationUrl]
-							 error:&error];
-	} else {
-		[fileManager replaceItemAtURL:[NSURL fileURLWithPath:destinationUrl]
-						withItemAtURL:location
-					   backupItemName:@"ololo"
-							  options:0ul
-					 resultingItemURL:NULL
-								error:&error];
-	}
-	NSLog(@"%@", error);
-	
-//	AVPlayerViewController *playerViewController = [[AVPlayerViewController alloc] initWithNibName:nil bundle:nil];
-//	AVPlayer *player = [AVPlayer playerWithURL:[NSURL fileURLWithPath:destinationUrl]];
-//	playerViewController.player = player;
-//	[self presentViewController:playerViewController animated:YES completion:NULL];
-	
-}
-
 #pragma mark UITableViewDataSource<NSObject>
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    
     return [self.itunesEntries count];
-//    return 1;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
