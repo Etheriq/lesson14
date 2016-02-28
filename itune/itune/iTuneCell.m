@@ -14,6 +14,9 @@
 @property (strong, nonatomic) AVAudioPlayer* player;
 @property (strong, nonatomic) NSTimer* timer;
 
+@property (strong, nonatomic) NSMutableArray* galleryPhotos;
+@property (strong, nonatomic) NSArray* galleryItems;
+
 @end
 
 @implementation iTuneCell
@@ -95,8 +98,6 @@
     NSURLSessionDownloadTask *task = [self.session downloadTaskWithURL:[NSURL URLWithString:self.previewUrl]];
     [task resume];
     [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
-}
-- (IBAction)galleryAction:(UIButton *)sender {
 }
 
 #pragma mark - Player progress bar
